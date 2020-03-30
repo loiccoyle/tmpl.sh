@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Find the tmpl dir.
-[ -z $TMPL_DIR ] && TMPL_DIR=$XDG_TEMPLATES_DIR
-[ -z $TMPL_DIR ] && TMPL_DIR=$HOME/Templates
+[ -z $TMPL_DIR ] && TMPL_DIR=$XDG_TEMPLATES_DIR && [ -z $TMPL_DIR ] && TMPL_DIR=$HOME/Templates
+[ ! -d $TMPL_DIR ] && ( echo "\"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
 
 # Find editor
 [ -z $EDITOR ] && EDITOR='vim'
@@ -13,8 +13,6 @@
 # echo "TMPL_DIR: $TMPL_DIR"
 # echo "EDITOR: $EDITOR"
 # echo "TMPL_TAR: $TMPL_TAR"
-
-[ ! -d $TMPL_DIR ] && ( echo "\"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
 
 # Usage echo
 usage() {
@@ -42,15 +40,15 @@ add () {
     dest="$TMPL_DIR/$dest"
 
     # read from stdin
-    [ $source == "-" ] && cat > "$dest" && return
+    [ "$source" == "-" ] && cat > "$dest" && return
     # if file
-    [ -f $source ] && cp "$source" "$dest" && return
+    [ -f "$source" ] && cp "$source" "$dest" && return
     # if folder
-    [ -d $source ] && tar -cf "$dest$TMPL_TAR" "$source" && return
+    [ -d "$source" ] && tar -cf "$dest$TMPL_TAR" "$source" && return
+    # check github/gitlab
+    [[ "$source" =~ (.+)/(.+)/(.+) ]] && ( add_github "$source" "$dest" || add_gitlab "$source" "$dest" ) && return
     # try url
     curl -s "$source" -o "$dest" && return
-    # check github/gitlab
-    [[ $source =~ (.+)/(.+)/(.+) ]] && ( add_github "$source" "$dest" || add_gitlab "$source" "$dest" ) && return
 
     echo "\"$source\" not recognized." 1>&2; return 1
 }
@@ -114,7 +112,7 @@ OPTIND=1
 subcommand=$1; shift  # Remove 'tmpl' from the argument list
 # echo subcommand: $subcommand
 case "$subcommand" in
-    # Parse options to the install sub command
+    # Parse options to the sub command
     add )
         while getopts ":b:" opt; do
             case ${opt} in
