@@ -22,16 +22,16 @@ usage() {
     echo ""
     echo "Usage:"
     echo "  tmpl [-h] [-e]"
-    echo "    -h                                      Display this help message. "
-    echo "    -e                                      Open 'DEST' in \$EDITOR."
-    echo "  tmpl add [-b BRANCH] SOURCE [DEST]        Add 'SOURCE' to tmpl folder."
-    echo "    -b BRANCH                               Github/Gitlab branch, when using git shorthand, default \"master\"."
-    echo "    SOURCE                                  File/directory path, \"-\", url, Github/Gitlab shorthand, i.e. user/repo/[folder/]file."
-    echo "    DEST                                    Optional, destination name in tmpl folder, default 'SOURCE' filename."
-    echo "  tmpl fetch TEMPLATE [DEST]                Fetch 'TEMPLATE' from tmpl folder."
-    echo "    TEMPLATE                                Template in tmpl folder to fetch."
-    echo "    DEST                                    Optional, template destination, default cwd."
-    echo "  tmpl COMMAND [...]                        Run 'COMMAND' in tmpl folder."
+    echo "    -h                                 Display this help message. "
+    echo "    -e                                 Open 'DEST' in \$EDITOR."
+    echo "  tmpl add [-b BRANCH] SOURCE [DEST]   Add 'SOURCE' to tmpl folder."
+    echo "    -b BRANCH                          Github/Gitlab branch, when using git shorthand, default \"master\"."
+    echo "    SOURCE                             File/directory, \"-\", url or Github/Gitlab shorthand, i.e. user/repo/[folder/]file."
+    echo "    DEST                               Optional, destination name in tmpl folder, default 'SOURCE' filename."
+    echo "  tmpl fetch TEMPLATE [DEST]           Fetch 'TEMPLATE' from tmpl folder."
+    echo "    TEMPLATE                           Template in tmpl folder to fetch."
+    echo "    DEST                               Optional, template destination, default cwd."
+    echo "  tmpl COMMAND [...]                   Run 'COMMAND' in tmpl folder."
 }
 
 add () {
@@ -51,6 +51,8 @@ add () {
     curl -s "$source" -o "$dest" && return
     # check github/gitlab
     [[ $source =~ (.+)/(.+)/(.+) ]] && ( add_github "$source" "$dest" || add_gitlab "$source" "$dest" ) && return
+
+    echo "\"$source\" not recognized." 1>&2; return 1
 }
 
 join_by () { local IFS="$1"; shift; echo "$*"; }
@@ -76,6 +78,8 @@ fetch () {
     [[ "${template#*.}" == *"tar"* ]] && tar -xf "$template" -C "$dest" && return
     # if just a normal file
     [ -f "$template" ] && cp "$template" "$dest" && return
+
+    echo "\"$template\" not found." 1>&2; return 1
 }
 
 # Defaults
