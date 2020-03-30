@@ -42,15 +42,15 @@ add () {
     dest="$TMPL_DIR/$dest"
 
     # read from stdin
-    [ $source == "-" ] && cat > "$dest" && exit 0
+    [ $source == "-" ] && cat > "$dest" && return
     # if file
-    [ -f $source ] && cp "$source" "$dest" && exit 0
+    [ -f $source ] && cp "$source" "$dest" && return
     # if folder
-    [ -d $source ] && tar -cf "$dest$TMPL_TAR" "$source" && exit 0
+    [ -d $source ] && tar -cf "$dest$TMPL_TAR" "$source" && return
     # try url
-    curl -s "$source" -o "$dest" && exit 0
+    curl -s "$source" -o "$dest" && return
     # check github/gitlab
-    [[ $source =~ (.+)/(.+)/(.+) ]] && ( add_github "$source" "$dest" || add_gitlab "$source" "$dest" ) && exit 0
+    [[ $source =~ (.+)/(.+)/(.+) ]] && ( add_github "$source" "$dest" || add_gitlab "$source" "$dest" ) && return
 }
 
 join_by () { local IFS="$1"; shift; echo "$*"; }
@@ -71,11 +71,11 @@ fetch () {
     template="$TMPL_DIR/$1"
     dest="$2"
     # if output to stdout
-    [ "$dest" == '-' ] && cat "$template" && exit 0
+    [ "$dest" == '-' ] && cat "$template" && return
     # if tar decompress
-    [[ "${template#*.}" == *"tar"* ]] && tar -xf "$template" -C "$dest" && exit 0
+    [[ "${template#*.}" == *"tar"* ]] && tar -xf "$template" -C "$dest" && return
     # if just a normal file
-    [ -f "$template" ] && cp "$template" "$dest" && exit 0
+    [ -f "$template" ] && cp "$template" "$dest" && return
 }
 
 # Defaults
