@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+
+# Find the tmpl dir.
+[ -z $TMPL_DIR ] && TMPL_DIR=$XDG_TEMPLATES_DIR
+[ -z $TMPL_DIR ] && TMPL_DIR=$HOME/Templates
+
+# Find editor
+[ -z $EDITOR ] && EDITOR='vim'
+
+# tmpl tar format
+[ -z $TMPL_TAR ] && TMPL_TAR=".tar.gz"
+
+echo "TMPL_DIR: $TMPL_DIR"
+echo "EDITOR: $EDITOR"
+echo "TMPL_TAR: $TMPL_TAR"
+
+# Usage echo
+usage() {
+    echo "Usage:"
+    echo "  tmpl [-h] [-e]                            Display this help message."
+    echo "  tmpl add [-b BRANCH] SOURCE [DEST]        Add 'SOURCE' to tmpl folder."
+    echo "  tmpl fetch TEMPLATE [DEST]                Fetch 'TEMPLATE' from tmpl folder."
+    echo "  tmpl COMMAND [...]                        Run 'COMMAND' in tmpl folder."
+}
+
+add () {
+    source=$1
+    dest=$2
+    # if dest is empty
+    [ -z $dest ] && dest="$(basename $source)"
+    dest="$TMPL_DIR/$dest"
+
+    # read from stdin
+    [ $source == "-" ] && cat > "$dest" && exit 0
+    # if file
+    [ -f $source ] && cp "$source" "$dest" && exit 0
+    # if folder
+    [ -d $source ] && tar -cf "$dest$TMPL_TAR" "$source" && exit 0
+    # try url
+    curl -s "$source" -o "$dest" && exit 0
+    # check github/gitlab
+    [[ $source =~ (.+)/(.+)/(.+) ]] && ( add_github "$source" "$dest" || add_gitlab "$source" "$dest" ) && exit 0
+}
+
+join_by () { local IFS="$1"; shift; echo "$*"; }
+
+add_github () {
+    array=(${1//'/'/ })
+    rest=${array[@]:2}
+    curl -s "https://raw.githubusercontent.com/${array[0]}/${array[1]}/$branch/$(join_by / $rest)" -o "$2" >/dev/null
+}
+
+add_gitlab () {
+    array=(${1//'/'/ })
+    rest=${array[@]:2}
+    curl -s "https://gitlab.com/${array[0]}/${array[1]}/-/raw/$branch/$(join_by / $rest)" -o "$2" >/dev/null
+}
+
+fetch () {
+    template="$TMPL_DIR/$1"
+    dest="$2"
+
+    # if output to stdout
+    [ "$dest" == '-' ] && cat "$template" && exit 0
+    # if tar deompress else copy
+    echo "${template#*.}"
+    [[ "${template#*.}" == *"tar"* ]] && tar -xf "$template" -C "$dest" && exit 0
+    # if just a normal file
+    [ -f "$template" ] && cp "$template" "$dest" && exit 0
+}
+
+branch="master"
+edit=false
+add_source="-"
+add_dest=""
+fetch_template=""
+fetch_dest="."
+
+# Parse options to the `tmpl` command
+while getopts ":he" opt; do
+    case ${opt} in
+        h )
+            usage
+            exit 0
+            ;;
+        e )
+            edit=true
+            ;;
+        \? )
+            echo "Invalid Option: -$OPTARG" 1>&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+shift $((OPTIND -1))
+#reset OPTIND
+OPTIND=1
+
+subcommand=$1; shift  # Remove 'tmpl' from the argument list
+echo subcommand: $subcommand
+case "$subcommand" in
+    # Parse options to the install sub command
+    add )
+        while getopts ":b:" opt; do
+            case ${opt} in
+                b )
+                    branch=$OPTARG
+                    echo "branch: $branch"
+                    ;;
+                \? )
+                    echo "Invalid Option: -$OPTARG" 1>&2
+                    usage
+                    exit 1
+                    ;;
+                : )
+                    echo "Invalid Option: -$OPTARG requires an argument" 1>&2
+                    usage
+                    exit 1
+                    ;;
+            esac
+        done
+        shift $((OPTIND -1))
+        [ "$#" -gt 2 ] && echo "Invalid number of arguments." 1>&2 && usage && exit 1
+        [ -z $1 ] && echo "Required argument 'SOURCE' not provided." 1>&2 && usage && exit 1 || add_source=$1
+        [ -z $2 ] || add_dest=$2
+        echo source: $add_source
+        echo dest: $add_dest
+        add $add_source $add_dest && [ $edit = true ] && $EDITOR "$add_dest"
+        exit 0
+        ;;
+
+    fetch )
+        [ "$#" -gt 2 ] && echo "Invalid number of arguments" 1>&2 && usage && exit 1
+        [ -z $1 ] && echo "Required argument 'TEMPLATE' not provided." 1>&2 && usage && exit 1 || fetch_template=$1
+        [ -z $2 ] || fetch_dest=$2
+        echo template: $fetch_template
+        echo dest: $fetch_dest
+        fetch $fetch_template $fetch_dest && [ $edit = true ] && [ $fetch_dest != '-' ] && $EDITOR "$fetch_dest"
+        exit 0
+        ;;
+
+    "" )
+        usage
+        exit 0
+        ;;
+
+    * )
+        cd "$TMPL_DIR" && $subcommand $@; cd - >/dev/null
+        exit 0
+        ;;
+esac
+
