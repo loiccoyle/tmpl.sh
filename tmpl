@@ -14,12 +14,23 @@ echo "TMPL_DIR: $TMPL_DIR"
 echo "EDITOR: $EDITOR"
 echo "TMPL_TAR: $TMPL_TAR"
 
+[ ! -d $TMPL_DIR ] && ( echo "\"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
+
 # Usage echo
 usage() {
+    echo "XDG Templates CLI."
+    echo ""
     echo "Usage:"
-    echo "  tmpl [-h] [-e]                            Display this help message."
+    echo "  tmpl [-h] [-e]"
+    echo "    -h                                      Display this help message. "
+    echo "    -e                                      Open 'DEST' in \$EDITOR."
     echo "  tmpl add [-b BRANCH] SOURCE [DEST]        Add 'SOURCE' to tmpl folder."
+    echo "    -b BRANCH                               Github/Gitlab branch, when using git shorthand, default \"master\"."
+    echo "    SOURCE                                  File/directory path, \"-\", url, Github/Gitlab shorthand, i.e. user/repo/[folder/]file."
+    echo "    DEST                                    Optional, destination name in tmpl folder, default 'SOURCE' filename."
     echo "  tmpl fetch TEMPLATE [DEST]                Fetch 'TEMPLATE' from tmpl folder."
+    echo "    TEMPLATE                                Template in tmpl folder to fetch."
+    echo "    DEST                                    Optional, template destination, default cwd."
     echo "  tmpl COMMAND [...]                        Run 'COMMAND' in tmpl folder."
 }
 
@@ -59,16 +70,15 @@ add_gitlab () {
 fetch () {
     template="$TMPL_DIR/$1"
     dest="$2"
-
     # if output to stdout
     [ "$dest" == '-' ] && cat "$template" && exit 0
-    # if tar deompress else copy
-    echo "${template#*.}"
+    # if tar decompress
     [[ "${template#*.}" == *"tar"* ]] && tar -xf "$template" -C "$dest" && exit 0
     # if just a normal file
     [ -f "$template" ] && cp "$template" "$dest" && exit 0
 }
 
+# Defaults
 branch="master"
 edit=false
 add_source="-"
@@ -121,23 +131,25 @@ case "$subcommand" in
             esac
         done
         shift $((OPTIND -1))
-        [ "$#" -gt 2 ] && echo "Invalid number of arguments." 1>&2 && usage && exit 1
-        [ -z $1 ] && echo "Required argument 'SOURCE' not provided." 1>&2 && usage && exit 1 || add_source=$1
+        [ "$#" -gt 2 ] && ( echo "Invalid number of arguments." 1>&2; usage; exit 1 )
+        [ -z $1 ] && ( echo "Required argument 'SOURCE' not provided." 1>&2; usage; exit 1 )
+
+        add_source=$1
         [ -z $2 ] || add_dest=$2
         echo source: $add_source
         echo dest: $add_dest
-        add $add_source $add_dest && [ $edit = true ] && $EDITOR "$add_dest"
-        exit 0
+        add $add_source $add_dest && [ $edit = true ] && $EDITOR "$add_dest" && exit 0
         ;;
 
     fetch )
-        [ "$#" -gt 2 ] && echo "Invalid number of arguments" 1>&2 && usage && exit 1
-        [ -z $1 ] && echo "Required argument 'TEMPLATE' not provided." 1>&2 && usage && exit 1 || fetch_template=$1
+        [ "$#" -gt 2 ] && ( echo "Invalid number of arguments" 1>&2; usage; exit 1 )
+        [ -z $1 ] && ( echo "Required argument 'TEMPLATE' not provided." 1>&2; usage; exit 1 )
+
+        fetch_template=$1
         [ -z $2 ] || fetch_dest=$2
         echo template: $fetch_template
         echo dest: $fetch_dest
-        fetch $fetch_template $fetch_dest && [ $edit = true ] && [ $fetch_dest != '-' ] && $EDITOR "$fetch_dest"
-        exit 0
+        fetch $fetch_template $fetch_dest && [ $edit = true ] && [ $fetch_dest != '-' ] && $EDITOR "$fetch_dest" && exit 0
         ;;
 
     "" )
@@ -146,8 +158,7 @@ case "$subcommand" in
         ;;
 
     * )
-        cd "$TMPL_DIR" && $subcommand $@; cd - >/dev/null
-        exit 0
+        cd "$TMPL_DIR" && ( $subcommand $@; cd - >/dev/null ) && exit 0
         ;;
 esac
 
