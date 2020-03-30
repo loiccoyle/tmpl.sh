@@ -10,9 +10,9 @@
 # tmpl tar format
 [ -z $TMPL_TAR ] && TMPL_TAR=".tar.gz"
 
-echo "TMPL_DIR: $TMPL_DIR"
-echo "EDITOR: $EDITOR"
-echo "TMPL_TAR: $TMPL_TAR"
+# echo "TMPL_DIR: $TMPL_DIR"
+# echo "EDITOR: $EDITOR"
+# echo "TMPL_TAR: $TMPL_TAR"
 
 [ ! -d $TMPL_DIR ] && ( echo "\"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
 
@@ -108,7 +108,7 @@ shift $((OPTIND -1))
 OPTIND=1
 
 subcommand=$1; shift  # Remove 'tmpl' from the argument list
-echo subcommand: $subcommand
+# echo subcommand: $subcommand
 case "$subcommand" in
     # Parse options to the install sub command
     add )
@@ -116,7 +116,7 @@ case "$subcommand" in
             case ${opt} in
                 b )
                     branch=$OPTARG
-                    echo "branch: $branch"
+                    # echo "branch: $branch"
                     ;;
                 \? )
                     echo "Invalid Option: -$OPTARG" 1>&2
@@ -136,8 +136,8 @@ case "$subcommand" in
 
         add_source=$1
         [ -z $2 ] || add_dest=$2
-        echo source: $add_source
-        echo dest: $add_dest
+        # echo source: $add_source
+        # echo dest: $add_dest
         add $add_source $add_dest && [ $edit = true ] && $EDITOR "$add_dest" && exit 0
         ;;
 
@@ -147,8 +147,8 @@ case "$subcommand" in
 
         fetch_template=$1
         [ -z $2 ] || fetch_dest=$2
-        echo template: $fetch_template
-        echo dest: $fetch_dest
+        # echo template: $fetch_template
+        # echo dest: $fetch_dest
         fetch $fetch_template $fetch_dest && [ $edit = true ] && [ $fetch_dest != '-' ] && $EDITOR "$fetch_dest" && exit 0
         ;;
 
