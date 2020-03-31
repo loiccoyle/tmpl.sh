@@ -58,13 +58,15 @@ join_by () { local IFS="$1"; shift; echo "$*"; }
 add_github () {
     array=(${1//'/'/ })
     rest=${array[@]:2}
-    curl -s -f "https://raw.githubusercontent.com/${array[0]}/${array[1]}/$branch/$(join_by / $rest)" -o "$2" >/dev/null
+    code=$(curl -s -f -w "%{http_code}" "https://raw.githubusercontent.com/${array[0]}/${array[1]}/$branch/$(join_by / $rest)" -o "$2")
+    [ ! "$code" -eq 200 ] && [ -f "$2" ] && ( rm "$2"; return 1 )
 }
 
 add_gitlab () {
     array=(${1//'/'/ })
     rest=${array[@]:2}
-    curl -s -f "https://gitlab.com/${array[0]}/${array[1]}/-/raw/$branch/$(join_by / $rest)" -o "$2" >/dev/null
+    code=$(curl -s -f -w "%{http_code}" "https://gitlab.com/${array[0]}/${array[1]}/-/raw/$branch/$(join_by / $rest)" -o "$2")
+    [ ! "$code" -eq 200 ] && [ -f "$2" ] && ( rm "$2"; return 1 )
 }
 
 fetch () {
