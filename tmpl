@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 # Find the tmpl dir.
-[ -z $TMPL_DIR ] && TMPL_DIR=$XDG_TEMPLATES_DIR && [ -z $TMPL_DIR ] && TMPL_DIR=$HOME/Templates
-[ ! -d $TMPL_DIR ] && ( echo "\"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
+[ -z "$TMPL_DIR" ] && TMPL_DIR="$XDG_TEMPLATES_DIR" && [ -z "$TMPL_DIR" ] && TMPL_DIR="$HOME/Templates"
+[ ! -d "$TMPL_DIR" ] && ( echo "\"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
 
 # Find editor
-[ -z $EDITOR ] && EDITOR='vim'
+[ -z "$EDITOR" ] && EDITOR="vim"
 
 # tmpl tar format
-[ -z $TMPL_TAR ] && TMPL_TAR=".tar.gz"
+[ -z "$TMPL_TAR" ] && TMPL_TAR=".tar.gz"
 
 # echo "TMPL_DIR: $TMPL_DIR"
 # echo "EDITOR: $EDITOR"
@@ -33,22 +33,22 @@ usage() {
 }
 
 add () {
-    source=$1
-    dest=$2
+    source="$1"
+    dest="$2"
     # if dest is empty
-    [ -z $dest ] && dest="$(basename $source)"
+    [ -z "$dest" ] && dest="$(basename $source)"
     dest="$TMPL_DIR/$dest"
 
-    # read from stdin
-    [ "$source" == "-" ] && cat > "$dest" && return
     # if file
     [ -f "$source" ] && cp "$source" "$dest" && return
     # if folder
     [ -d "$source" ] && tar -cf "$dest$TMPL_TAR" "$source" && return
+    # read from stdin
+    [ "$source" == "-" ] && cat > "$dest" && return
     # check github/gitlab
     [[ "$source" =~ (.+)/(.+)/(.+) ]] && ( add_github "$source" "$dest" || add_gitlab "$source" "$dest" ) && return
     # try url
-    curl -s "$source" -o "$dest" && return
+    curl -s -f "$source" -o "$dest" && return
 
     echo "\"$source\" not recognized." 1>&2; return 1
 }
@@ -58,24 +58,25 @@ join_by () { local IFS="$1"; shift; echo "$*"; }
 add_github () {
     array=(${1//'/'/ })
     rest=${array[@]:2}
-    curl -s "https://raw.githubusercontent.com/${array[0]}/${array[1]}/$branch/$(join_by / $rest)" -o "$2" >/dev/null
+    curl -s -f "https://raw.githubusercontent.com/${array[0]}/${array[1]}/$branch/$(join_by / $rest)" -o "$2" >/dev/null
 }
 
 add_gitlab () {
     array=(${1//'/'/ })
     rest=${array[@]:2}
-    curl -s "https://gitlab.com/${array[0]}/${array[1]}/-/raw/$branch/$(join_by / $rest)" -o "$2" >/dev/null
+    curl -s -f "https://gitlab.com/${array[0]}/${array[1]}/-/raw/$branch/$(join_by / $rest)" -o "$2" >/dev/null
 }
 
 fetch () {
     template="$TMPL_DIR/$1"
     dest="$2"
-    # if output to stdout
-    [ "$dest" == '-' ] && cat "$template" && return
-    # if tar decompress
-    [[ "${template#*.}" == *"tar"* ]] && tar -xf "$template" -C "$dest" && return
+
     # if just a normal file
     [ -f "$template" ] && cp "$template" "$dest" && return
+    # if tar decompress
+    [[ "${template#*.}" == *"tar"* ]] && tar -xf "$template" -C "$dest" && return
+    # if output to stdout
+    [ "$dest" == "-" ] && cat "$template" && return
 
     echo "\"$template\" not found." 1>&2; return 1
 }
@@ -117,7 +118,7 @@ case "$subcommand" in
         while getopts ":b:" opt; do
             case ${opt} in
                 b )
-                    branch=$OPTARG
+                    branch="$OPTARG"
                     # echo "branch: $branch"
                     ;;
                 \? )
@@ -134,24 +135,24 @@ case "$subcommand" in
         done
         shift $((OPTIND -1))
         [ "$#" -gt 2 ] && ( echo "Invalid number of arguments." 1>&2; usage; exit 1 )
-        [ -z $1 ] && ( echo "Required argument 'SOURCE' not provided." 1>&2; usage; exit 1 )
+        [ -z "$1" ] && ( echo "Required argument 'SOURCE' not provided." 1>&2; usage; exit 1 )
 
-        add_source=$1
-        [ -z $2 ] || add_dest=$2
+        add_source="$1"
+        [ -z "$2" ] || add_dest="$2"
         # echo source: $add_source
         # echo dest: $add_dest
-        add $add_source $add_dest && [ $edit = true ] && $EDITOR "$add_dest" && exit 0
+        add "$add_source" "$add_dest" && [ $edit = true ] && $EDITOR "$add_dest" && exit 0
         ;;
 
     fetch )
         [ "$#" -gt 2 ] && ( echo "Invalid number of arguments" 1>&2; usage; exit 1 )
-        [ -z $1 ] && ( echo "Required argument 'TEMPLATE' not provided." 1>&2; usage; exit 1 )
+        [ -z "$1" ] && ( echo "Required argument 'TEMPLATE' not provided." 1>&2; usage; exit 1 )
 
-        fetch_template=$1
-        [ -z $2 ] || fetch_dest=$2
+        fetch_template="$1"
+        [ -z "$2" ] || fetch_dest="$2"
         # echo template: $fetch_template
         # echo dest: $fetch_dest
-        fetch $fetch_template $fetch_dest && [ $edit = true ] && [ $fetch_dest != '-' ] && $EDITOR "$fetch_dest" && exit 0
+        fetch "$fetch_template" "$fetch_dest" && [ $edit = true ] && [ "$fetch_dest" != '-' ] && $EDITOR "$fetch_dest" && exit 0
         ;;
 
     "" )
