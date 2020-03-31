@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 # Find the tmpl dir.
-[ -z "$TMPL_DIR" ] && TMPL_DIR="$XDG_TEMPLATES_DIR" && [ -z "$TMPL_DIR" ] && TMPL_DIR="$HOME/Templates"
-[ ! -d "$TMPL_DIR" ] && ( echo "\"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
+TMPL_DIR="${TMPL_DIR:-"${XDG_TEMPLATES_DIR:-"$HOME/Templates"}"}"
+[ ! -d "$TMPL_DIR" ] && ( echo "Directory \"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
 
 # Find editor
-[ -z "$EDITOR" ] && EDITOR="vim"
+EDITOR="${EDITOR:-"vim"}"
 
 # tmpl tar format
-[ -z "$TMPL_TAR" ] && TMPL_TAR=".tar.gz"
+TMPL_TAR="${TMPL_TAR:-".tar.gz"}"
 
 # echo "TMPL_DIR: $TMPL_DIR"
 # echo "EDITOR: $EDITOR"
