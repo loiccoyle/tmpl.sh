@@ -40,15 +40,15 @@ add () {
     dest="$TMPL_DIR/$dest"
 
     # if file
-    [ -f "$source" ] && cp "$source" "$dest" && return
+    [ -f "$source" ] && cp "$source" "$dest" && return 0
     # if folder
-    [ -d "$source" ] && tar -cf "$dest$TMPL_TAR" "$source" && return
+    [ -d "$source" ] && tar -cf "$dest$TMPL_TAR" "$source" && return 0
     # read from stdin
-    [ "$source" == "-" ] && cat > "$dest" && return
+    [ "$source" == "-" ] && cat > "$dest" && return 0
     # check github/gitlab
-    [[ "$source" =~ (.+)/(.+)/(.+) ]] && ( add_github "$source" "$dest" || add_gitlab "$source" "$dest" ) && return
+    [[ "$source" =~ (.+)/(.+)/(.+) ]] && ( add_github "$source" "$dest" || add_gitlab "$source" "$dest" ) && return 0
     # try url
-    curl -s -f "$source" -o "$dest" && return
+    curl -s -f "$source" -o "$dest" && return 0
 
     echo "\"$source\" not recognized." 1>&2; return 1
 }
@@ -60,6 +60,7 @@ add_github () {
     rest=${array[@]:2}
     code=$(curl -s -f -w "%{http_code}" "https://raw.githubusercontent.com/${array[0]}/${array[1]}/$branch/$(join_by / $rest)" -o "$2")
     [ ! "$code" -eq 200 ] && [ -f "$2" ] && ( rm "$2"; return 1 )
+    return 0
 }
 
 add_gitlab () {
@@ -67,6 +68,7 @@ add_gitlab () {
     rest=${array[@]:2}
     code=$(curl -s -f -w "%{http_code}" "https://gitlab.com/${array[0]}/${array[1]}/-/raw/$branch/$(join_by / $rest)" -o "$2")
     [ ! "$code" -eq 200 ] && [ -f "$2" ] && ( rm "$2"; return 1 )
+    return 0
 }
 
 fetch () {
@@ -74,11 +76,11 @@ fetch () {
     dest="$2"
 
     # if just a normal file
-    [ -f "$template" ] && cp "$template" "$dest" && return
+    [ -f "$template" ] && cp "$template" "$dest" && return 0
     # if tar decompress
-    [[ "${template#*.}" == *"tar"* ]] && tar -xf "$template" -C "$dest" && return
+    [[ "${template#*.}" == *"tar"* ]] && tar -xf "$template" -C "$dest" && return 0
     # if output to stdout
-    [ "$dest" == "-" ] && cat "$template" && return
+    [ "$dest" == "-" ] && cat "$template" && return 0
 
     echo "\"$template\" not found." 1>&2; return 1
 }
