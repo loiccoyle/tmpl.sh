@@ -70,6 +70,7 @@ add_gitlab () {
 fetch () {
     template="$TMPL_DIR/$1"
     dest="$2"
+    [ -d "$dest" ] && dest="$dest/$(basename $template)"
 
     # if just a normal file
     [ -f "$template" ] && cp "$template" "$dest" && return 0
@@ -137,7 +138,7 @@ case "$subcommand" in
 
         add_source="$1"
         [ -z "$2" ] || add_dest="$2"
-        add "$add_source" "$add_dest" && [ $edit = true ] && $EDITOR "$add_dest" && exit 0
+        add "$add_source" "$add_dest" && [ $edit = true ] && $EDITOR "$dest" && exit 0
         ;;
 
     fetch )
@@ -146,7 +147,7 @@ case "$subcommand" in
 
         fetch_template="$1"
         [ -z "$2" ] || fetch_dest="$2"
-        fetch "$fetch_template" "$fetch_dest" && [ $edit = true ] && [ "$fetch_dest" != '-' ] && $EDITOR "$fetch_dest" && exit 0
+        fetch "$fetch_template" "$fetch_dest" && [ $edit = true ] && [ "$fetch_dest" != '-' ] && $EDITOR "$dest" && exit 0
         ;;
 
     "" )
