@@ -7,9 +7,6 @@ TMPL_DIR="${TMPL_DIR:-"${XDG_TEMPLATES_DIR:-"$HOME/Templates"}"}"
 # Find editor
 EDITOR="${EDITOR:-"vim"}"
 
-# tmpl tar format
-TMPL_TAR="${TMPL_TAR:-".tar.gz"}"
-
 # Usage echo
 usage() {
     echo "XDG Templates CLI."
@@ -36,9 +33,7 @@ add () {
     dest="$TMPL_DIR/$dest"
 
     # if file
-    [ -f "$source" ] && cp "$source" "$dest" && return 0
-    # if folder
-    [ -d "$source" ] && tar -cf "$dest$TMPL_TAR" "$source" && return 0
+    ( [ -f "$source" ] || [ -d "$source" ] ) && cp -r "$source" "$dest" && return 0
     # read from stdin
     [ "$source" == "-" ] && cat > "$dest" && return 0
     # check github/gitlab
@@ -73,9 +68,7 @@ fetch () {
     [ -d "$dest" ] && dest="$dest/$(basename $template)"
 
     # if just a normal file
-    [ -f "$template" ] && cp "$template" "$dest" && return 0
-    # if tar decompress
-    [[ "${template#*.}" == *"tar"* ]] && tar -xf "$template" -C "$dest" && return 0
+    ( [ -f "$template" ] || [ -d "$template" ] ) && cp -r "$template" "$dest" && return 0
     # if output to stdout
     [ "$dest" == "-" ] && cat "$template" && return 0
 

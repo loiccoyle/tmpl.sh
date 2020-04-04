@@ -23,9 +23,9 @@ There are 2 subcommands, `add` and `fetch`, they are quite self explanatory, but
       ```bash
       tmpl add setup.py
       ```
-    * add `pyproject` folder as `pyproject.tar.gz`, folder are compressed when added and decompressed when fetched, the compression format can be set with `$TMPL_TAR`:
+    * add `package` folder as `pypackage`:
       ```bash
-      tmpl add pyproject/
+      tmpl add package/ pypackage
       ```
     * add `setup.py` to tmpl folder as `setup.py` and edit the template using `$EDITOR`:
       ```bash
@@ -52,9 +52,9 @@ There are 2 subcommands, `add` and `fetch`, they are quite self explanatory, but
     ```bash
     tmpl -e fetch setup.py
     ```
-  * fetch folder `pyproject.tar.gz` and decompress it:
+  * fetch folder `pypackage` and decompress it:
     ```bash
-    tmpl fetch pyproject.tar.gz
+    tmpl fetch pypackage
     ```
   * fetch `LICENSE_MIT` to stdout:
     ```bash
