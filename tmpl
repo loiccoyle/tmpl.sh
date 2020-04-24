@@ -149,7 +149,7 @@ case "$subcommand" in
         ;;
 
     * )
-        cd "$TMPL_DIR" && ( $subcommand $@; cd - >/dev/null ) && exit 0
+        cd "$TMPL_DIR" && ( $subcommand "$@"; cd - >/dev/null ) && exit 0
         ;;
 esac
 
