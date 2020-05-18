@@ -67,10 +67,10 @@ fetch () {
     dest="$2"
     [ -d "$dest" ] && dest="$dest/$(basename $template)"
 
-    # if just a normal file
-    ( [ -f "$template" ] || [ -d "$template" ] ) && cp -r "$template" "$dest" && return 0
     # if output to stdout
     [ "$dest" == "-" ] && cat "$template" && return 0
+    # if just a normal file
+    ( [ -f "$template" ] || [ -d "$template" ] ) && cp -r "$template" "$dest" && return 0
 
     echo "\"$template\" not found." 1>&2; return 1
 }
