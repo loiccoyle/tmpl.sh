@@ -50,7 +50,7 @@ add_github () {
     array=(${1//'/'/ })
     rest=${array[@]:2}
     code=$(curl -s -f -w "%{http_code}" "https://raw.githubusercontent.com/${array[0]}/${array[1]}/$branch/$(join_by / $rest)" -o "$2")
-    [ ! "$code" -eq 200 ] && [ -f "$2" ] && ( rm "$2"; return 1 )
+    [ "$code" -eq 200 ] || { rm "$2" 2> /dev/null; return 1; }
     return 0
 }
 
@@ -58,7 +58,7 @@ add_gitlab () {
     array=(${1//'/'/ })
     rest=${array[@]:2}
     code=$(curl -s -f -w "%{http_code}" "https://gitlab.com/${array[0]}/${array[1]}/-/raw/$branch/$(join_by / $rest)" -o "$2")
-    [ ! "$code" -eq 200 ] && [ -f "$2" ] && ( rm "$2"; return 1 )
+    [ "$code" -eq 200 ] || { rm "$2" 2> /dev/null; return 1; }
     return 0
 }
 
