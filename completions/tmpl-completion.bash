@@ -1,6 +1,5 @@
-# Find the tmpl dir.
-
 _tmpl () {
+    # Find the tmpl directory
     local tmpl_dir="$TMPL_DIR"
     [ -z "$tmpl_dir" ] && tmpl_dir="$XDG_TEMPLATES_DIR" && [ -z "$tmpl_dir" ] && tmpl_dir="$HOME/Templates"
     case "${COMP_WORDS[1]}" in
