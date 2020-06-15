@@ -36,7 +36,7 @@ function _tmpl_add {
 
 function _tmpl_fetch {
     _arguments \
-        "1: :($(__get_tmpl_dir))" \
+        "1: :($(__get_tmpl_files))" \
         "*:file:_files"
 }
 
@@ -47,7 +47,7 @@ function _tmpl_fallthrough {
 }
 
 
-function __get_tmpl_dir {
+function __get_tmpl_files {
     local tmpl_dir=$TMPL_DIR
     [ -z $tmpl_dir ] && tmpl_dir=$XDG_TEMPLATES_DIR && [ -z $tmpl_dir ] && tmpl_dir=$HOME/Templates
     echo "$(ls $tmpl_dir)"
