@@ -2,77 +2,77 @@
 
 # Find the tmpl dir.
 TMPL_DIR="${TMPL_DIR:-"${XDG_TEMPLATES_DIR:-"$HOME/Templates"}"}"
-[ ! -d "$TMPL_DIR" ] && ( echo "Directory \"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
+[ ! -d "$TMPL_DIR" ] && ( printf "Directory \"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
 
 # Find editor
 EDITOR="${EDITOR:-"vim"}"
 
 # Usage echo
 usage() {
-    echo "XDG Templates CLI."
-    echo ""
-    echo "Usage:"
-    echo "  tmpl [-h] [-e]"
-    echo "    -h                                 Display this help message. "
-    echo "    -e                                 Open 'DEST' in \$EDITOR."
-    echo "  tmpl add [-b BRANCH] SOURCE [DEST]   Add 'SOURCE' to tmpl folder."
-    echo "    -b BRANCH                          Github/Gitlab branch, when using git shorthand, default \"master\"."
-    echo "    SOURCE                             File/directory, \"-\", url or Github/Gitlab shorthand, i.e. user/repo/[folder/]file."
-    echo "    DEST                               Optional, destination name in tmpl folder, default 'SOURCE' filename."
-    echo "  tmpl fetch TEMPLATE [DEST]           Fetch 'TEMPLATE' from tmpl folder."
-    echo "    TEMPLATE                           Template in tmpl folder to fetch."
-    echo "    DEST                               Optional, template destination, default cwd."
-    echo "  tmpl COMMAND [...]                   Run 'COMMAND' in tmpl folder."
+    printf """XDG Templates CLI.
+Template dir: %s
+
+Usage:
+  tmpl [-h] [-e]
+    -h                                 Display this help message.
+    -e                                 Open 'DEST' in \$EDITOR.
+  tmpl add [-b BRANCH] SOURCE [DEST]   Add 'SOURCE' to tmpl folder.
+    -b BRANCH                          Github/Gitlab branch, when using git shorthand, default \"master\".
+    SOURCE                             File/directory, \"-\", url or Github/Gitlab shorthand, i.e. g[hl]:user/repo/(folder/)file.
+    DEST                               Optional, destination name in tmpl folder, default 'SOURCE' filename.
+  tmpl fetch TEMPLATE [DEST]           Fetch 'TEMPLATE' from tmpl folder.
+    TEMPLATE                           Template in tmpl folder to fetch.
+    DEST                               Optional, template destination, default cwd.
+  tmpl COMMAND [...]                   Run 'COMMAND' in tmpl folder.""" $TMPL_DIR
 }
 
 add () {
-    source="$1"
-    dest="$2"
-    # if dest is empty
-    [ -z "$dest" ] && dest="$(basename $source)"
-    dest="$TMPL_DIR/$dest"
+    local source="$1"
+    local dest="$2"
 
-    # if file
+    # if file or directory
     ( [ -f "$source" ] || [ -d "$source" ] ) && cp -r "$source" "$dest" && return 0
     # read from stdin
     [ "$source" == "-" ] && cat > "$dest" && return 0
     # check github/gitlab
-    [[ "$source" =~ (.+)/(.+)/(.+) ]] && ( add_github "$source" "$dest" || add_gitlab "$source" "$dest" ) && return 0
+    [[ "$source" =~ gh\:(.+)/(.+)/(.+) ]] && add_github "${source/#gh:}" "$dest" && return 0
+    [[ "$source" =~ gl\:(.+)/(.+)/(.+) ]] && add_gitlab "${source/#gl:}" "$dest" && return 0
     # try url
     curl -s -f "$source" -o "$dest" && return 0
 
-    echo "\"$source\" not recognized." 1>&2; return 1
+    printf "\"%s\" not recognized.\n" $source 1>&2
+    return 1
 }
 
 join_by () { local IFS="$1"; shift; echo "$*"; }
 
 add_github () {
-    array=(${1//'/'/ })
-    rest=${array[@]:2}
-    code=$(curl -s -f -w "%{http_code}" "https://raw.githubusercontent.com/${array[0]}/${array[1]}/$branch/$(join_by / $rest)" -o "$2")
-    [ "$code" -eq 200 ] || { rm "$2" 2> /dev/null; return 1; }
+    local array=(${1//'/'/ })
+    local rest=${array[@]:2}
+    local code=$(curl -s -f -w "%{http_code}" "https://raw.githubusercontent.com/${array[0]}/${array[1]}/$branch/$(join_by / $rest)" -o "$2")
+    [ "$code" -ne 200 ] && { rm "$2" 2> /dev/null; return 1; }
+    # Needed to have a 0 return code
     return 0
 }
 
 add_gitlab () {
-    array=(${1//'/'/ })
-    rest=${array[@]:2}
-    code=$(curl -s -f -w "%{http_code}" "https://gitlab.com/${array[0]}/${array[1]}/-/raw/$branch/$(join_by / $rest)" -o "$2")
-    [ "$code" -eq 200 ] || { rm "$2" 2> /dev/null; return 1; }
+    local array=(${1//'/'/ })
+    local rest=${array[@]:2}
+    local code=$(curl -s -f -w "%{http_code}" "https://gitlab.com/${array[0]}/${array[1]}/-/raw/$branch/$(join_by / $rest)" -o "$2")
+    [ "$code" -ne 200 ] && { rm "$2" 2> /dev/null; return 1; }
+    # Needed to have a 0 return code
     return 0
 }
 
 fetch () {
-    template="$TMPL_DIR/$1"
-    dest="$2"
-    [ -d "$dest" ] && dest="$dest/$(basename $template)"
+    local template="$1"
+    local dest="$2"
 
     # if output to stdout
-    [ "$dest" == "-" ] && cat "$template" && return 0
+    [ "$dest" == "-" ] && cat "$template"
     # if just a normal file
-    ( [ -f "$template" ] || [ -d "$template" ] ) && cp -r "$template" "$dest" && return 0
-
-    echo "\"$template\" not found." 1>&2; return 1
+    ( [ -f "$template" ] || [ -d "$template" ] ) && cp -r "$template" "$dest"
+    return 0
 }
 
 # Defaults
@@ -86,15 +86,15 @@ fetch_dest="."
 # Parse options to the `tmpl` command
 while getopts ":he" opt; do
     case ${opt} in
-        h )
+        "h" )
             usage
             exit 0
             ;;
-        e )
+        "e" )
             edit=true
             ;;
-        \? )
-            echo "Invalid Option: -$OPTARG" 1>&2
+        "\?" )
+            printf "Invalid Option: -%s\n" $OPTARG 1>&2
             usage
             exit 1
             ;;
@@ -107,40 +107,48 @@ OPTIND=1
 subcommand=$1; shift  # Remove 'tmpl' from the argument list
 case "$subcommand" in
     # Parse options to the sub command
-    add )
+    "add" )
         while getopts ":b:" opt; do
             case ${opt} in
-                b )
+                "b" )
                     branch="$OPTARG"
                     ;;
-                \? )
-                    echo "Invalid Option: -$OPTARG" 1>&2
+                "\?" )
+                    printf "Invalid Option: -%s\n" $OPTARG 1>&2
                     usage
                     exit 1
                     ;;
-                : )
-                    echo "Invalid Option: -$OPTARG requires an argument" 1>&2
+                ":" )
+                    printf "Invalid Option: -%s requires an argument.\n" $OPTARG 1>&2
                     usage
                     exit 1
                     ;;
             esac
         done
         shift $((OPTIND -1))
-        [ "$#" -gt 2 ] && ( echo "Invalid number of arguments." 1>&2; usage ) && exit 1
-        [ -z "$1" ] && ( echo "Required argument 'SOURCE' not provided." 1>&2; usage ) && exit 1
+        [ "$#" -gt 2 ] && ( printf "Invalid number of arguments.\n" 1>&2; usage ) && exit 1
+        [ -z "$1" ] && ( printf "Required argument 'SOURCE' not provided.\n" 1>&2; usage ) && exit 1
 
         add_source="$1"
-        [ -z "$2" ] || add_dest="$2"
-        add "$add_source" "$add_dest" && [ $edit = true ] && $EDITOR "$dest" && exit 0
+        add_dest="$2"
+        # if dest is empty
+        [ -z "$add_dest" ] && add_dest="$(basename $add_source)"
+        add_dest="$TMPL_DIR/$add_dest"
+
+        add "$add_source" "$add_dest" && $edit && $EDITOR "$add_dest"
         ;;
 
-    fetch )
-        [ "$#" -gt 2 ] && ( echo "Invalid number of arguments" 1>&2; usage ) && exit 1
-        [ -z "$1" ] && ( echo "Required argument 'TEMPLATE' not provided." 1>&2; usage ) && exit 1
+    "fetch" )
+        [ "$#" -gt 2 ] && ( printf "Invalid number of arguments.\n" 1>&2; usage ) && exit 1
+        [ -z "$1" ] && ( printf "Required argument 'TEMPLATE' not provided.\n" 1>&2; usage ) && exit 1
 
-        fetch_template="$1"
-        [ -z "$2" ] || fetch_dest="$2"
-        fetch "$fetch_template" "$fetch_dest" && [ $edit = true ] && [ "$fetch_dest" != '-' ] && $EDITOR "$dest" && exit 0
+        fetch_template="$TMPL_DIR/$1"
+        [ ! -f "$fetch_template" ] && printf "\"%s\" not found.\n" $fetch_template 1>&2 && exit 1
+        # if no argument then fallback to default '.'
+        [ ! -z "$2" ] && fetch_dest="$2"
+        [ -d "$fetch_dest" ] && fetch_dest="$fetch_dest/$(basename $fetch_template)"
+
+        fetch "$fetch_template" "$fetch_dest" && $edit && [ "$fetch_dest" != '-' ] && $EDITOR "$fetch_dest"
         ;;
 
     "" )

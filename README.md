@@ -41,7 +41,7 @@ There are 2 subcommands, `add` and `fetch`, they are quite self explanatory, but
       ```
     * with git shorthand (can specify the branch with `-b`, default is `master`) works with gitlab too:
 	  ```bash
-      tmpl add -b master loiccoyle/tmpl.sh/README.md
+      tmpl add -b master gh:loiccoyle/tmpl.sh/README.md
       ```
     * from stdin to `LICENSE_GPL`:
       ```bash
@@ -51,10 +51,6 @@ There are 2 subcommands, `add` and `fetch`, they are quite self explanatory, but
   * fetch `setup.py` to `./setup.py` and edit:
     ```bash
     tmpl -e fetch setup.py
-    ```
-  * fetch folder `pypackage` and decompress it:
-    ```bash
-    tmpl fetch pypackage
     ```
   * fetch `LICENSE_MIT` to stdout:
     ```bash
