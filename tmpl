@@ -93,7 +93,7 @@ while getopts ":he" opt; do
         "e" )
             edit=true
             ;;
-        "\?" )
+        \? )
             printf "Invalid Option: -%s\n" $OPTARG 1>&2
             usage
             exit 1
@@ -113,7 +113,7 @@ case "$subcommand" in
                 "b" )
                     branch="$OPTARG"
                     ;;
-                "\?" )
+                \? )
                     printf "Invalid Option: -%s\n" $OPTARG 1>&2
                     usage
                     exit 1
