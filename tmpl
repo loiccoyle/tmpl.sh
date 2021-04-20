@@ -2,7 +2,7 @@
 
 # Find the tmpl dir.
 TMPL_DIR="${TMPL_DIR:-"${XDG_TEMPLATES_DIR:-"$HOME/Templates"}"}"
-[ ! -d "$TMPL_DIR" ] && ( printf "Directory \"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; )
+[ ! -d "$TMPL_DIR" ] && { printf "Directory \"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; }
 
 # Find editor
 EDITOR="${EDITOR:-"vim"}"
@@ -69,7 +69,7 @@ fetch () {
     local dest="$2"
 
     # if output to stdout
-    [ "$dest" == "-" ] && cat "$template"
+    [ "$dest" = "-" ] && cat "$template" && return 0
     # if just a normal file
     ( [ -f "$template" ] || [ -d "$template" ] ) && cp -r "$template" "$dest"
     return 0
