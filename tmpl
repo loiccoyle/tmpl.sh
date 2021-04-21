@@ -2,10 +2,24 @@
 
 # Find the tmpl dir.
 TMPL_DIR="${TMPL_DIR:-"${XDG_TEMPLATES_DIR:-"$HOME/Templates"}"}"
-[ ! -d "$TMPL_DIR" ] && { printf "Directory \"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." 1>&2; exit 1; }
+if [ ! -d "$TMPL_DIR" ]; then
+    printf "Directory \"$TMPL_DIR\" does not exist. Create it or set \$TMPL_DIR or \$XDG_TEMPLATES_DIR to an existing directory." >&2
+    exit 1
+fi
 
 # Find editor
 EDITOR="${EDITOR:-"vim"}"
+
+msg() {
+    # Print msg to stderr.
+    [ "$VERBOSE" -ge "$1" ] && printf "%s\n" "$2" >&2
+}
+
+err_exit(){
+    # Print msg and exit.
+    printf "%s\n" "$1"
+    exit 1
+}
 
 # Usage echo
 usage() {
@@ -16,6 +30,7 @@ Usage:
   tmpl [-h] [-e]
     -h                                 Display this help message.
     -e                                 Open 'DEST' in \$EDITOR.
+    -v                                 Verbosity.
   tmpl add [-b BRANCH] SOURCE [DEST]   Add 'SOURCE' to tmpl folder.
     -b BRANCH                          Github/Gitlab branch, when using git shorthand, default \"master\".
     SOURCE                             File/directory, \"-\", url or Github/Gitlab shorthand, i.e. g[hl]:user/repo/(folder/)file.
@@ -23,97 +38,81 @@ Usage:
   tmpl fetch TEMPLATE [DEST]           Fetch 'TEMPLATE' from tmpl folder.
     TEMPLATE                           Template in tmpl folder to fetch.
     DEST                               Optional, template destination, default cwd.
-  tmpl COMMAND [...]                   Run 'COMMAND' in tmpl folder.""" $TMPL_DIR
+  tmpl COMMAND [...]                   Run 'COMMAND' in tmpl folder.
+
+""" $TMPL_DIR
 }
 
-add () {
-    local source="$1"
-    local dest="$2"
-
-    # if file or directory
-    ( [ -f "$source" ] || [ -d "$source" ] ) && cp -r "$source" "$dest" && return 0
-    # read from stdin
-    [ "$source" == "-" ] && cat > "$dest" && return 0
-    # check github/gitlab
-    [[ "$source" =~ gh\:(.+)/(.+)/(.+) ]] && add_github "${source/#gh:}" "$dest" && return 0
-    [[ "$source" =~ gl\:(.+)/(.+)/(.+) ]] && add_gitlab "${source/#gl:}" "$dest" && return 0
-    # try url
-    curl -s -f "$source" -o "$dest" && return 0
-
-    printf "\"%s\" not recognized.\n" $source 1>&2
-    return 1
+join_by () {
+    # Join args on $1.
+    local IFS="$1"
+    shift
+    printf "$*"
 }
-
-join_by () { local IFS="$1"; shift; echo "$*"; }
 
 add_github () {
-    local array=(${1//'/'/ })
-    local rest=${array[@]:2}
-    local code=$(curl -s -f -w "%{http_code}" "https://raw.githubusercontent.com/${array[0]}/${array[1]}/$branch/$(join_by / $rest)" -o "$2")
-    [ "$code" -ne 200 ] && { rm "$2" 2> /dev/null; return 1; }
-    # Needed to have a 0 return code
-    return 0
+    # Download a file from github.
+    declare -a url_array=(${1//'/'/ })
+    local rest="${url_array[@]:2}"
+    local dest="$2"
+    local gh_url="https://raw.githubusercontent.com/${url_array[0]}/${url_array[1]}/$BRANCH/$(join_by / $rest)"
+    msg 1 "github url: $gh_url"
+    curl --silent --fail "$gh_url" -o "$dest" || err_exit "Failed to download from github."
 }
 
 add_gitlab () {
-    local array=(${1//'/'/ })
-    local rest=${array[@]:2}
-    local code=$(curl -s -f -w "%{http_code}" "https://gitlab.com/${array[0]}/${array[1]}/-/raw/$branch/$(join_by / $rest)" -o "$2")
-    [ "$code" -ne 200 ] && { rm "$2" 2> /dev/null; return 1; }
-    # Needed to have a 0 return code
-    return 0
-}
-
-fetch () {
-    local template="$1"
+    # Download a file from gitlab.
+    declare -a url_array=(${1//'/'/ })
+    local rest="${url_array[@]:2}"
     local dest="$2"
-
-    # if output to stdout
-    [ "$dest" = "-" ] && cat "$template" && return 0
-    # if just a normal file
-    ( [ -f "$template" ] || [ -d "$template" ] ) && cp -r "$template" "$dest"
-    return 0
+    local gl_url="https://gitlab.com/${url_array[0]}/${url_array[1]}/-/raw/$BRANCH/$(join_by / $rest)"
+    msg 1 "gitlab url: $gl_url"
+    curl --silent --fail "$gl_url" -o "$dest" || err_exit "Failed to download from gitlab."
 }
 
 # Defaults
-branch="master"
-edit=false
-add_source="-"
-add_dest=""
-fetch_template=""
-fetch_dest="."
+BRANCH="master"
+EDIT=""
+SOURCE=""
+DEST=""
+TEMPLATE=""
+VERBOSE=0
 
 # Parse options to the `tmpl` command
-while getopts ":he" opt; do
+while getopts ":hev" opt; do
     case ${opt} in
         "h" )
             usage
             exit 0
             ;;
         "e" )
-            edit=true
+            EDIT=1
             ;;
-        \? )
-            printf "Invalid Option: -%s\n" $OPTARG 1>&2
+        "v" )
+            VERBOSE=$((VERBOSE + 1))
+            ;;
+        "?" )
+            printf "Invalid Option: -%s\n" $OPTARG >&2
             usage
             exit 1
             ;;
     esac
 done
-shift $((OPTIND -1))
-#reset OPTIND
-OPTIND=1
+shift $((OPTIND - 1))
+# reset OPTIND
+OPTIND=0
 
-subcommand=$1; shift  # Remove 'tmpl' from the argument list
-case "$subcommand" in
+SUBCOMMAND="$1"
+shift  # Remove from args
+case "$SUBCOMMAND" in
     # Parse options to the sub command
     "add" )
         while getopts ":b:" opt; do
             case ${opt} in
                 "b" )
-                    branch="$OPTARG"
+                    BRANCH="$OPTARG"
                     ;;
-                \? )
+                "?" )
                     printf "Invalid Option: -%s\n" $OPTARG 1>&2
                     usage
                     exit 1
@@ -125,30 +124,63 @@ case "$subcommand" in
                     ;;
             esac
         done
-        shift $((OPTIND -1))
-        [ "$#" -gt 2 ] && ( printf "Invalid number of arguments.\n" 1>&2; usage ) && exit 1
-        [ -z "$1" ] && ( printf "Required argument 'SOURCE' not provided.\n" 1>&2; usage ) && exit 1
+        shift $((OPTIND - 1))
 
-        add_source="$1"
-        add_dest="$2"
-        # if dest is empty
-        [ -z "$add_dest" ] && add_dest="$(basename $add_source)"
-        add_dest="$TMPL_DIR/$add_dest"
+        [ "$#" -gt 2 ] && err_exit "Invalid number of arguments."
+        [ "$#" = 0 ] && err_exit "No SOURCE provided."
 
-        add "$add_source" "$add_dest" && $edit && $EDITOR "$add_dest"
+        SOURCE="${1}"
+        DEST="$TMPL_DIR/$(basename "${2:-$SOURCE}")"
+
+        msg 2 "add source: $SOURCE"
+        msg 2 "add dest: $DEST"
+
+        if [ "$SOURCE" = "-" ] && [ -z "$2" ]; then
+            err_exit "No DEST provided."
+        fi
+
+        case "$SOURCE" in
+            gh:*/*/* )
+                # try to add github
+                add_github "${SOURCE#"gh:"}" "$DEST"
+                ;;
+            gl:*/*/* )
+                # try to add gitlab
+                add_gitlab "${SOURCE#"gl:"}" "$DEST"
+                ;;
+            "-" )
+                # from stdin
+                cat > "$DEST" || err_exit "Failed to write from stdin -> \"$DEST\""
+                ;;
+            * )
+                # just cp
+                cp -r "$SOURCE" "$DEST" || err_exit "Failed to copy \"$SOURCE\" -> \"$DEST\""
+                ;;
+        esac
+        # maybe open in editor
+        [ -n "$EDIT" ] && "$EDITOR" "$DEST"
         ;;
 
     "fetch" )
-        [ "$#" -gt 2 ] && ( printf "Invalid number of arguments.\n" 1>&2; usage ) && exit 1
-        [ -z "$1" ] && ( printf "Required argument 'TEMPLATE' not provided.\n" 1>&2; usage ) && exit 1
+        [ "$#" -gt 2 ] && err_exit "Invalid number of arguments."
+        [ "$#" = 0 ] && err_exit "No TEMPLATE provided."
 
-        fetch_template="$TMPL_DIR/$1"
-        [ ! -f "$fetch_template" ] && printf "\"%s\" not found.\n" $fetch_template 1>&2 && exit 1
-        # if no argument then fallback to default '.'
-        [ ! -z "$2" ] && fetch_dest="$2"
-        [ -d "$fetch_dest" ] && fetch_dest="$fetch_dest/$(basename $fetch_template)"
+        TEMPLATE="$TMPL_DIR/$1"
+        DEST="${2:-"./$(basename "$TEMPLATE")"}"
 
-        fetch "$fetch_template" "$fetch_dest" && $edit && [ "$fetch_dest" != '-' ] && $EDITOR "$fetch_dest"
+        msg 2 "fetch template: $TEMPLATE"
+        msg 2 "fetch dest: $DEST"
+
+        case "$DEST" in
+            "-" )
+                cat "$TEMPLATE" || err_exit "Failed to write to stdin."
+                ;;
+            * )
+                cp -r "$TEMPLATE" "$DEST" || err_exit "Failed to copy \"$TEMPLATE\" -> \"$DEST\""
+                ;;
+        esac
+        # maybe open in editor
+        [ -n "$EDIT" ] && "$EDITOR" "$DEST"
         ;;
 
     "" )
@@ -157,7 +189,7 @@ case "$subcommand" in
         ;;
 
     * )
-        cd "$TMPL_DIR" && ( $subcommand "$@"; cd - >/dev/null ) && exit 0
+        # cd and run command
+        cd "$TMPL_DIR" && $SUBCOMMAND $@
         ;;
 esac
-
