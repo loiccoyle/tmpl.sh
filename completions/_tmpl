@@ -1,5 +1,6 @@
 #compdef _tmpl tmpl
 
+TMPL_DIR="${TMPL_DIR:-"${XDG_TEMPLATES_DIR:-"$HOME/Templates"}"}"
 
 function _tmpl {
     local line
@@ -7,48 +8,31 @@ function _tmpl {
     _arguments -C \
         "-h[Show help information]" \
         "-e[Open DEST in \$EDITOR]" \
+        "-v[Increase verbosity]" \
         "1: :(add fetch)" \
         "*::arg:->args"
 
-    case $line[1] in
-        add)
-            _tmpl_add
+    case "$line[1]" in
+        "add" )
+            _arguments \
+                "-b[Git branch]:" \
+                "1:file:_files" \
+                "2:file:_files -W $TMPL_DIR"
+
         ;;
-        fetch)
-            _tmpl_fetch
+        "fetch" )
+            _arguments \
+                "1:file:_files -W $TMPL_DIR" \
+                "2:file:_files"
         ;;
         "")
         # catch empty string
         ;;
-        *)
-            _tmpl_fallthrough
+        * )
+            # TODO: this isn't perfect, would be good to trigger the normal
+            # completion from another directory.
+            _arguments \
+                "*: :_files -W $TMPL_DIR"
         ;;
     esac
-}
-
-
-function _tmpl_add {
-    _arguments \
-        "-b[Git branch]:" \
-        "*:file:_files"
-}
-
-
-function _tmpl_fetch {
-    _arguments \
-        "1: :($(__get_tmpl_files))" \
-        "*:file:_files"
-}
-
-
-function _tmpl_fallthrough {
-    _arguments \
-        "*:file:_files"
-}
-
-
-function __get_tmpl_files {
-    local tmpl_dir="$TMPL_DIR"
-    [ -z "$tmpl_dir" ] && tmpl_dir="$XDG_TEMPLATES_DIR" && [ -z "$tmpl_dir" ] && tmpl_dir="$HOME/Templates"
-    echo "$(ls $tmpl_dir)"
 }
