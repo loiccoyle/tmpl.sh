@@ -148,6 +148,10 @@ case "$SUBCOMMAND" in
                 # try to add gitlab
                 add_gitlab "${SOURCE#"gl:"}" "$DEST"
                 ;;
+            https:* | http:* )
+                # download file
+                curl --silent --fail "$SOURCE" -o "$DEST" || err_exit "Failed to download \"$SOURCE\" -> \"$DEST\""
+                ;;
             "-" )
                 # from stdin
                 cat > "$DEST" || err_exit "Failed to write from stdin -> \"$DEST\""
