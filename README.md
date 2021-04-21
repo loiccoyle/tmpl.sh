@@ -12,6 +12,8 @@ Turn your `$XDG_TEMPLATES_DIR` into a tmpl of templates! <sub>it's the best I ha
 
 Just plop the `tmpl` file in your `$PATH`, make sure it's executable. And put the completions file of your shell somewhere it knows about.
 
+Note: The bash completion needs a face lift...
+
 # Usage
 
 `tmpl` respects the `$XDG_TEMPLATES_DIR` variable but can also store it's templates in another directory if the `$TMPL_DIR` variable is set. If none are set it will fall back on `$HOME/Templates`.
